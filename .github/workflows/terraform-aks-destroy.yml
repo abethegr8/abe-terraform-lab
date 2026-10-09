@@ -1,0 +1,109 @@
+
+name: Terraform AKS Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type DESTROY to confirm AKS lab deletion'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-aks-state
+  cancel-in-progress: false
+
+env:
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: "true"
+  ARM_USE_AZUREAD: "true"
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  destroy-plan:
+    name: Plan AKS destruction
+    if: ${{ github.ref == 'refs/heads/main' && inputs.confirmation == 'DESTROY' }}
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: azure-aks-lab
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.1"
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Destroy Plan
+        run: terraform plan -destroy -input=false -lock-timeout=5m -out=tfdestroyplan
+
+      - name: Display Destroy Plan
+        run: terraform show -no-color tfdestroyplan
+
+      - name: Upload Destroy Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: aks-destroy-plan
+          path: azure-aks-lab/tfdestroyplan
+          retention-days: 1
+
+  destroy:
+    name: Destroy AKS infrastructure
+    needs: destroy-plan
+    runs-on: ubuntu-latest
+    environment: aks-lab
+
+    defaults:
+      run:
+        working-directory: azure-aks-lab
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.1"
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Download Destroy Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: aks-destroy-plan
+          path: azure-aks-lab
+
+      - name: Terraform Destroy
+        run: terraform apply -input=false -lock-timeout=5m tfdestroyplan
