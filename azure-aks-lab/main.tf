@@ -8,11 +8,11 @@ terraform {
     }
   }
 
-  cloud {
-    organization = "abe-terraform-lab"
-    workspaces {
-      name = "azure-aks-lab"
-    }
+  backend "azurerm" {
+    resource_group_name  = "rg-tfstate"
+    storage_account_name = "stabestfstate001"
+    container_name       = "tfstate001"
+    key                  = "aks/terraform.tfstate"
   }
 }
 
@@ -23,10 +23,10 @@ provider "azurerm" {
 
 resource "azurerm_resource_group" "rg" {
   name     = "lab-aks-rg"
-  location = "eastus"
+  location = "westus"
 }
 
-resource "azurerm_kubernetes_cluster" "aks" { 
+resource "azurerm_kubernetes_cluster" "aks" {
   name                = "lab-aks1"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
@@ -42,6 +42,10 @@ resource "azurerm_kubernetes_cluster" "aks" {
     auto_scaling_enabled = true
     min_count            = 1
     max_count            = 2
+
+    upgrade_settings {
+      max_surge = "10%"
+    }
   }
 
   identity {
