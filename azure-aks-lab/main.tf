@@ -13,6 +13,7 @@ terraform {
     storage_account_name = "stabestfstate001"
     container_name       = "tfstate001"
     key                  = "aks/terraform.tfstate"
+    use_azuread_auth = true
   }
 }
 

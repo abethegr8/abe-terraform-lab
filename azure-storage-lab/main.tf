@@ -8,11 +8,12 @@ terraform {
     }
   }
 
-  cloud {
-    organization = "abe-terraform-lab"
-    workspaces {
-      name = "azure-storage-lab"
-    }
+  backend "azurerm" {
+    resource_group_name  = "rg-tfstate"
+    storage_account_name = "stabestfstate001"
+    container_name       = "tfstate001"
+    key                  = "storage/terraform.tfstate"
+    use_azuread_auth = true
   }
 }
 
