@@ -38,11 +38,12 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
   default_node_pool {
     name                 = "default"
-    node_count           = 1
+    node_count           = 2
     vm_size              = "Standard_D2ads_v7"
-    auto_scaling_enabled = true
-    min_count            = 2
-    max_count            = 2
+    auto_scaling_enabled = false
+    
+    #min_count            = 2
+    #max_count            = 2
 
     upgrade_settings {
       max_surge = "10%"
