@@ -41,7 +41,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     node_count           = 1
     vm_size              = "Standard_D2ads_v7"
     auto_scaling_enabled = true
-    min_count            = 1
+    min_count            = 2
     max_count            = 2
 
     upgrade_settings {
